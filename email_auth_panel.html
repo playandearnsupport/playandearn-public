@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Play & Earn - Authenticating...</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      text-align: center;
+      padding: 50px 20px;
+      background: #ffffff;
+      color: #000000;
+      margin: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .card {
+      max-width: 400px;
+      margin: 40px auto;
+      background: #f9f9f9;
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid #eeeeee;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+    p {
+      font-size: 15px;
+      color: #555555;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 20px 0;
+      border: 1px solid #cccccc;
+      border-radius: 6px;
+      font-size: 15px;
+      background: #ffffff;
+      color: #000000;
+      outline: none;
+    }
+    input:focus {
+      border-color: #000000;
+    }
+    button {
+      background: #22c55e;
+      color: #ffffff;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    #msg {
+      margin-top: 15px;
+      font-size: 14px;
+      border-radius: 6px;
+      padding: 0;
+      transition: all 0.2s;
+    }
+    #msg.error {
+      color: #ff3333;
+      background: rgba(255, 51, 51, 0.1);
+      border: 1px solid rgba(255, 51, 51, 0.2);
+      padding: 10px;
+    }
+    #msg.success {
+      color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      padding: 10px;
+    }
+    .hidden {
+      display: none;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #000000;
+        color: #ffffff;
+      }
+      .card {
+        background: #111111;
+        border-color: #222222;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      }
+      p {
+        color: #aaaaaa;
+      }
+      input {
+        background: #222222;
+        color: #ffffff;
+        border-color: #444444;
+      }
+      input:focus {
+        border-color: #ffffff;
+      }
+      button {
+        background: #22c55e;
+        color: #ffffff;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="verify-view">
+      <h1 style="color: #22c55e;">Success!</h1>
+      <p>Authentication complete. Redirecting you to <strong>Play & Earn</strong>...</p>
+      <button onclick="openApp()">Open App</button>
+    </div>
+
+    <div id="reset-view" class="hidden">
+      <h1>Reset Password</h1>
+      <p>Enter your new password below:</p>
+      <input type="password" id="new-password" placeholder="New Password (6+ characters)">
+      <button onclick="submitPassword()">Update Password</button>
+      <div id="msg"></div>
+    </div>
+  </div>
+
+  <script>
+    const supabaseUrl = 'https://pmmpajgdwsnktvhnrgxs.supabase.co';
+    const anonKey = 'sb_publishable_9-MPaWAOPKCP1Y1UKBV8Ag_gYkhXUDA';
+
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get('access_token');
+    const type = params.get('type');
+
+    const verifyView = document.getElementById('verify-view');
+    const resetView = document.getElementById('reset-view');
+    const msgDiv = document.getElementById('msg');
+
+    if (type === 'recovery' && accessToken) {
+      verifyView.classList.add('hidden');
+      resetView.classList.remove('hidden');
+    } else {
+      setTimeout(openApp, 1500);
+    }
+
+    function openApp() {
+      const search = window.location.search || '';
+      const hashFragment = window.location.hash || '';
+      window.location.href = 'playandearn://login-callback' + search + hashFragment;
+    }
+
+    async function submitPassword() {
+      const password = document.getElementById('new-password').value;
+      if (password.length < 6) {
+        msgDiv.className = 'error';
+        msgDiv.innerText = 'Password must be at least 6 characters.';
+        return;
+      }
+
+      msgDiv.className = '';
+      msgDiv.innerText = 'Updating...';
+
+      try {
+        const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': anonKey,
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({ password: password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          msgDiv.className = 'success';
+          msgDiv.innerText = 'Password updated! Opening app...';
+          setTimeout(openApp, 1500);
+        } else {
+          msgDiv.className = 'error';
+          msgDiv.innerText = data.msg || data.error_description || 'Update failed.';
+        }
+      } catch (err) {
+        msgDiv.className = 'error';
+        msgDiv.innerText = 'Connection error.';
+      }
+    }
+  </script>
+</body>
+</html>
